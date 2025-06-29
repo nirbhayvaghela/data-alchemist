@@ -184,10 +184,8 @@ export const DataGridSection: React.FC = () => {
 
     console.log(validationErrors.length, "lenth");
 
-    // setValidationErrors(errors);
     toast("Validation Complete", {
       description: `Found ${validationErrors.length} issues across all data tables.`,
-      //   variant: errors.length > 0 ? "destructive" : "default",
     });
   };
 
