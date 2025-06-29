@@ -1,17 +1,27 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useDataStore } from "@/store/dataStore";
-import { CheckSquare, Edit } from "lucide-react";
+import {
+  CheckSquare,
+  Download,
+  Edit,
+  Loader2,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
 import { DataRow } from "@/utils/types";
 import { useValidations } from "@/hooks/useValidations";
 import TooltipWrapper from "./ui-elements/TooltipWrapper";
+import { useQueryThroughAPI } from "@/hooks/apis/useQueryThroughAPI";
+import useFilterData from "@/hooks/use-filterData";
+import * as XLSX from "xlsx";
 
 interface EditableCellProps {
   value: any;
@@ -170,7 +180,10 @@ const DataTable: React.FC<DataTableProps> = ({ data, tableName, title }) => {
 
 export const DataGridSection: React.FC = () => {
   const { clients, workers, tasks, validationErrors } = useDataStore();
+  const [aiQuery, setAiQuery] = useState("");
   const { runAllValidations } = useValidations(clients, workers, tasks);
+  const { queryDataWithAI, isLoading } = useQueryThroughAPI();
+  const { applyFilters, resetFilters, setOriginalData } = useFilterData();
 
   const runValidation = () => {
     if (clients.length === 0 || workers.length === 0 || tasks.length === 0) {
@@ -189,8 +202,57 @@ export const DataGridSection: React.FC = () => {
     });
   };
 
+  const handleAIFilter = async () => {
+    const res = await queryDataWithAI(aiQuery);
+    if (res.filters) {
+      applyFilters(res.filters);
+      toast.success("AI filter applied", {
+        description: `Showing filtered results for: "${aiQuery}"`,
+        action: {
+          label: "Reset",
+          onClick: () => resetFilters(),
+        },
+      });
+    } else {
+      toast.info("No filters were applied");
+    }
+  };
+
+  const generateRulesConfig = () => {
+    // 1. Convert each JSON to sheet
+    const clientSheet = XLSX.utils.json_to_sheet(clients);
+    const workerSheet = XLSX.utils.json_to_sheet(workers);
+    const taskSheet = XLSX.utils.json_to_sheet(tasks);
+
+    // 2. Create workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, clientSheet, "clients");
+    XLSX.utils.book_append_sheet(workbook, workerSheet, "workers");
+    XLSX.utils.book_append_sheet(workbook, taskSheet, "tasks");
+
+    // 3. Write file
+    XLSX.writeFile(workbook, "data-export.xlsx");
+
+    toast("Exported Excel", {
+      description: "data-export.xlsx with 3 sheets has been saved.",
+    });
+
+    // toast("Configuration Downloaded", {
+    //   description: "business-rules.json has been saved to your downloads.",
+    // });
+  };
+
+  // Store original data when component mounts
+  useEffect(() => {
+    setOriginalData({
+      clients: [...clients],
+      workers: [...workers],
+      tasks: [...tasks],
+    });
+  }, [clients, workers, tasks, setOriginalData]);
+
   return (
-    <div className="space-y-6">
+    <div className=" flex flex-col space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight mb-2">
@@ -200,10 +262,38 @@ export const DataGridSection: React.FC = () => {
             View and edit your uploaded data. Click on any cell to make changes.
           </p>
         </div>
-        <Button onClick={runValidation} className="w-fit">
-          <CheckSquare className="w-4 h-4 mr-2" />
-          Run Validation
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="relative w-64">
+            <Input
+              placeholder="Filter data using AI "
+              value={aiQuery}
+              onChange={(e) => setAiQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAIFilter()}
+              className="pl-10 pr-20 border-neutral-500"
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Button
+              onClick={handleAIFilter}
+              disabled={isLoading || !aiQuery.trim()}
+              size="sm"
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-7 px-3"
+              variant="ghost"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-1" />
+                  Query
+                </>
+              )}
+            </Button>
+          </div>
+          <Button onClick={runValidation} className="w-fit">
+            <CheckSquare className="w-4 h-4 mr-2" />
+            Run Validation
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="clients" className="w-full">
@@ -225,6 +315,15 @@ export const DataGridSection: React.FC = () => {
           <DataTable data={tasks} tableName="tasks" title="Tasks Data" />
         </TabsContent>
       </Tabs>
+
+      <Button
+        onClick={generateRulesConfig}
+        variant="outline"
+        className="ml-auto"
+      >
+        <Download className="w-4 h-4 mr-2 " />
+        Export Config
+      </Button>
     </div>
   );
 };

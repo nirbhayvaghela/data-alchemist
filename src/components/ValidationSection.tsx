@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useValidations } from "@/hooks/useValidations";
-import { useAutoCorrection } from "@/hooks/useAutoCorrection";
+import { useAutoCorrection } from "@/hooks/apis/useAutoCorrection";
 
 export const ValidationSection: React.FC = () => {
   const {

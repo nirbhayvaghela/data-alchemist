@@ -1,4 +1,3 @@
-import { BusinessRulesSection } from "@/components/BusinessRulesSection";
 import { DataGridSection } from "@/components/DataGridSection";
 import { FileUploadSection } from "@/components/FileUploadSection";
 import { Badge } from "@/components/ui/badge";
@@ -101,7 +100,7 @@ export default function Home() {
         <Separator />
 
         {/* Business Rules Section */}
-        <BusinessRulesSection />
+        {/* <BusinessRulesSection />   */}
       </div>
 
       {/* Footer */}
