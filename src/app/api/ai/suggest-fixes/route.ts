@@ -1,6 +1,7 @@
 // app/api/ai/suggest-fixes.ts
 import { NextResponse } from "next/server";
 import { chatWithGemini } from "@/lib/ai";
+import { getAutoCorrectPrompt } from "@/lib/prompts/autoCorrect";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -10,7 +11,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const aiResponse = await chatWithGemini(body.errors);
+    const aiResponse = await chatWithGemini(getAutoCorrectPrompt(body.errors));
     try {
       // Remove markdown formatting if present
       const cleaned = aiResponse
